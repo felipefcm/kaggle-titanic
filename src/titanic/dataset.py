@@ -1,7 +1,6 @@
-import csv
 import pandas as pd
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import Optional, Tuple, cast, List
 
 
 @dataclass
@@ -20,11 +19,12 @@ class Passenger:
     embarked: Optional[str] = None
 
 
+@dataclass
 class Stats:
     total_passengers: int
 
 
-def load_titanic_data(file_path: str) -> list[Passenger]:
+def load_titanic_data(file_path: str) -> Tuple[list[Passenger], Stats]:
     data: list[Passenger] = []
     dt = pd.read_csv(file_path)
 
@@ -45,4 +45,4 @@ def load_titanic_data(file_path: str) -> list[Passenger]:
 
         data.append(p)
 
-    return data
+    return (data, Stats(total_passengers=len(data)))
