@@ -7,12 +7,15 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR
 from torch.nn.functional import binary_cross_entropy
 
-num_epochs = 800
+num_epochs = 300
 batch_size = 10
 
 trainset_passengers, stats = load_titanic_data("./dataset/train.csv")
-trainset = get_torch_dataset(trainset_passengers[:700])
-evalset = get_torch_dataset(trainset_passengers[700:])
+trainset = get_torch_dataset(trainset_passengers[:700], stats)
+evalset = get_torch_dataset(trainset_passengers[700:], stats)
+
+trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
+evalloader = DataLoader(evalset, batch_size=batch_size, shuffle=False)
 
 trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
 evalloader = DataLoader(evalset, batch_size=batch_size, shuffle=False)

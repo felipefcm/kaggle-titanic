@@ -1,6 +1,7 @@
 import pandas as pd
+import numpy as np
 from dataclasses import dataclass
-from typing import Optional, Tuple, cast, List
+from typing import Optional, Tuple, cast
 
 
 @dataclass
@@ -17,11 +18,21 @@ class Passenger:
     fare: float = 0.0
     cabin: Optional[str] = None
     embarked: Optional[str] = None
+    age_was_missing: bool = False
 
 
 @dataclass
 class Stats:
     total_passengers: int
+    age_by_class_sex: dict[int, dict[str, float]]
+    age_mean: float = 0.0
+    age_std: float = 1.0
+    fare_mean: float = 0.0
+    fare_std: float = 1.0
+    parch_mean: float = 0.0
+    parch_std: float = 1.0
+    sibsp_mean: float = 0.0
+    sibsp_std: float = 1.0
 
 
 def load_titanic_data(file_path: str) -> Tuple[list[Passenger], Stats]:
@@ -36,6 +47,7 @@ def load_titanic_data(file_path: str) -> Tuple[list[Passenger], Stats]:
         p.name = cast(str, row.Name)
         p.sex = cast(str, row.Sex)
         p.age = cast(float, row.Age) if pd.notna(row.Age) else None
+        p.age_was_missing = p.age is None
         p.sibsp = cast(int, row.SibSp)
         p.parch = cast(int, row.Parch)
         p.ticket = cast(str, row.Ticket)
@@ -45,4 +57,62 @@ def load_titanic_data(file_path: str) -> Tuple[list[Passenger], Stats]:
 
         data.append(p)
 
-    return (data, Stats(total_passengers=len(data)))
+    age_by_class_sex = _compute_age_means_by_class_sex(data)
+
+    data = _impute_missing_ages(data, age_by_class_sex)
+    stats = _compute_zscores_stats(data)
+
+    return (data, stats)
+
+
+def _compute_age_means_by_class_sex(
+    passengers: list[Passenger],
+) -> dict[int, dict[str, float]]:
+    age_by_class_sex: dict[int, dict[str, float]] = {}
+
+    for pclass in [1, 2, 3]:
+        age_by_class_sex[pclass] = {}
+        for sex in ["male", "female"]:
+            ages = [
+                p.age
+                for p in passengers
+                if p.pclass == pclass and p.sex == sex and p.age is not None
+            ]
+            age_by_class_sex[pclass][sex] = float(np.mean(ages)) if ages else 0.0
+
+    return age_by_class_sex
+
+
+def _impute_missing_ages(
+    passengers: list[Passenger], age_by_class_sex: dict[int, dict[str, float]]
+) -> list[Passenger]:
+    imputed_passengers = []
+
+    for p in passengers:
+        if p.age is None:
+            p.age = age_by_class_sex.get(p.pclass, {}).get(p.sex, 0.0)
+        imputed_passengers.append(p)
+
+    return imputed_passengers
+
+
+def _compute_zscores_stats(passengers: list[Passenger]) -> Stats:
+    age_by_class_sex = _compute_age_means_by_class_sex(passengers)
+
+    ages = [p.age for p in passengers if p.age is not None]
+    fares = [p.fare for p in passengers]
+    parchs = [p.parch for p in passengers]
+    sibsps = [p.sibsp for p in passengers]
+
+    return Stats(
+        total_passengers=len(passengers),
+        age_by_class_sex=age_by_class_sex,
+        age_mean=float(np.mean(ages)) if ages else 0.0,
+        age_std=float(np.std(ages)) if ages else 1.0,
+        fare_mean=float(np.mean(fares)),
+        fare_std=float(np.std(fares)),
+        parch_mean=float(np.mean(parchs)),
+        parch_std=float(np.std(parchs)),
+        sibsp_mean=float(np.mean(sibsps)),
+        sibsp_std=float(np.std(sibsps)),
+    )

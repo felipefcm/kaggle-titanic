@@ -34,6 +34,8 @@ Currently, no linting tools (pylint, flake8, black) are configured. Follow the s
 
 ## Code Style Guidelines
 
+Don't write comments unless absolutely necessary.
+
 ### Imports
 - Use `from X import Y` for specific items, `import X` for modules
 - Example:
@@ -49,13 +51,14 @@ Currently, no linting tools (pylint, flake8, black) are configured. Follow the s
   ```
 
 ### Formatting
+- Use Black formatter
 - Line length: Aim for ≤100 characters (no hard limit enforced)
 - Indentation: 4 spaces (Python standard)
 - Use type hints on function signatures and dataclass fields
 - Single blank line between methods/functions, two between class definitions
 
 ### Types & Type Hints
-- Always annotate function parameters and return types
+- Annotate function parameters and return types whenever types cannot be inferred
 - Use `list[X]` or `List[X]` for list types
 - Use `Optional[X]` for nullable values (not bare `X | None`)
 - Use `cast()` from typing module when converting values with uncertain types
