@@ -10,7 +10,7 @@ from torch.nn.functional import binary_cross_entropy
 num_epochs = 800
 batch_size = 10
 
-trainset_passengers = load_titanic_data("./dataset/train.csv")
+trainset_passengers, stats = load_titanic_data("./dataset/train.csv")
 trainset = get_torch_dataset(trainset_passengers[:700])
 evalset = get_torch_dataset(trainset_passengers[700:])
 
