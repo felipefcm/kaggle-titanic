@@ -14,11 +14,8 @@ trainset_passengers, stats = load_titanic_data("./dataset/train.csv")
 trainset = get_torch_dataset(trainset_passengers[:700], stats)
 evalset = get_torch_dataset(trainset_passengers[700:], stats)
 
-trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
-evalloader = DataLoader(evalset, batch_size=batch_size, shuffle=False)
-
-trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
-evalloader = DataLoader(evalset, batch_size=batch_size, shuffle=False)
+train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
+eval_loader = DataLoader(evalset, batch_size=batch_size, shuffle=False)
 
 input_size = trainset[0][0].shape.numel()
 nn = TitanicNN(input_size)
@@ -31,13 +28,10 @@ epoch_losses: list[float] = []
 for epoch in range(num_epochs):
     nn.train()
 
-    for input, expected in trainloader:
+    for input, expected in train_loader:
         output = nn(input)
-        zeroes = Tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).reshape(-1, 1)
-
-        # print(output, zeroes)
         loss = binary_cross_entropy(output, expected)
-        # loss = binary_cross_entropy(output, zeroes)
+
         epoch_losses.append(loss.item())
 
         loss.backward()
