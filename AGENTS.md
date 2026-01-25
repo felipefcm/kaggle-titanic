@@ -30,11 +30,10 @@ poetry run pytest --tb=short                         # Short traceback format
 ```
 
 ### Code Quality
-Currently, no linting tools (pylint, flake8, black) are configured. Follow the style guidelines below.
 
 ## Code Style Guidelines
 
-Don't write comments unless absolutely necessary.
+Only write comments in the code when the code itself cannot express the intent.
 
 ### Imports
 - Use `from X import Y` for specific items, `import X` for modules
@@ -54,7 +53,6 @@ Don't write comments unless absolutely necessary.
 - Use Black formatter
 - Line length: Aim for ≤100 characters (no hard limit enforced)
 - Indentation: 4 spaces (Python standard)
-- Use type hints on function signatures and dataclass fields
 - Single blank line between methods/functions, two between class definitions
 
 ### Types & Type Hints
@@ -66,19 +64,6 @@ Don't write comments unless absolutely necessary.
 - Example:
   ```python
   def load_data(file_path: str) -> Tuple[list[Passenger], Stats]:
-      age: Optional[float] = None
-  ```
-
-### Dataclasses & Data Structures
-- Use `@dataclass` decorator for data containers
-- Use type hints on all fields
-- Default values are acceptable for optional fields
-- Example:
-  ```python
-  @dataclass
-  class Passenger:
-      id: int = 0
-      survived: bool = False
       age: Optional[float] = None
   ```
 
