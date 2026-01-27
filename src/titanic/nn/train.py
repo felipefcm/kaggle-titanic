@@ -1,3 +1,4 @@
+from datetime import datetime
 from titanic.nn.nn import TitanicNN
 from titanic.dataset import load_titanic_data
 from titanic.nn.input import get_torch_dataset, prepare_input
@@ -7,9 +8,10 @@ from torch import Tensor
 from torch.optim import Adam
 from torch.optim.lr_scheduler import StepLR
 from torch.nn.functional import binary_cross_entropy
+from titanic.nn.tb_logger import TBLogger
 
 num_epochs = 400
-batch_size = 5
+batch_size = 10
 
 trainset_passengers, stats = load_titanic_data("./dataset/train.csv")
 
@@ -27,6 +29,10 @@ nn = TitanicNN(input_size)
 
 optimiser = Adam(nn.parameters(), lr=0.1)
 lr_scheduler = StepLR(optimiser, step_size=100, gamma=0.9)
+
+logger = TBLogger(
+    run_name=f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}", log_dir="runs"
+)
 
 epoch_losses: list[float] = []
 
@@ -53,14 +59,24 @@ for epoch in range(num_epochs):
             correct += ((output >= 0.5) == (expected == 1.0)).sum().item()
 
         accuracy = correct / len(evalset)
-        print("Evaluation accuracy after epoch", epoch, ":", accuracy)
+
+    avg_loss = sum(epoch_losses) / len(epoch_losses) if epoch_losses else 0.0
+
+    logger.log_epoch(
+        epoch, lr=lr_scheduler.get_last_lr(), loss=avg_loss, accuracy=accuracy
+    )
 
     print(
         "Epoch",
         epoch,
         "loss:",
-        sum(epoch_losses) / len(epoch_losses),
+        avg_loss,
+        "evaluation accuracy:",
+        accuracy,
         "lr:",
         lr_scheduler.get_last_lr(),
     )
     epoch_losses = []
+
+# close the tensorboard writer when training is finished
+logger.close()
