@@ -1,25 +1,28 @@
 from datetime import datetime
+
 from titanic.nn.nn import TitanicNN
-from titanic.dataset import load_titanic_data
-from titanic.nn.input import get_torch_dataset, prepare_input
-from torch.utils.data import DataLoader
+from titanic.dataset import load_titanic_data, process_passengers
+from titanic.nn.input import get_torch_dataset
+from titanic.nn.tb_logger import TBLogger
+
 import torch
-from torch import Tensor
+from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torch.optim.lr_scheduler import StepLR
 from torch.nn.functional import binary_cross_entropy
-from titanic.nn.tb_logger import TBLogger
 
-num_epochs = 400
+
+num_epochs = 300
 batch_size = 10
 
-trainset_passengers, stats = load_titanic_data("./dataset/train.csv")
+trainset_passengers = load_titanic_data("./dataset/train.csv")
 
-train_raw = get_torch_dataset(trainset_passengers[:700])
-eval_raw = get_torch_dataset(trainset_passengers[700:])
+train_processed, stats = process_passengers(trainset_passengers[:700])
+eval_processed, _ = process_passengers(trainset_passengers[700:])
+print(f"Datasets loaded: train={len(train_processed)} eval={len(eval_processed)}")
 
-trainset = prepare_input(train_raw, stats)
-evalset = prepare_input(eval_raw, stats)
+trainset = get_torch_dataset(train_processed)
+evalset = get_torch_dataset(eval_processed)
 
 train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
 eval_loader = DataLoader(evalset, batch_size=batch_size, shuffle=False)
@@ -38,7 +41,6 @@ epoch_losses: list[float] = []
 
 for epoch in range(num_epochs):
     nn.train()
-
     for input, expected in train_loader:
         output = nn(input)
         loss = binary_cross_entropy(output, expected)
@@ -61,6 +63,7 @@ for epoch in range(num_epochs):
         accuracy = correct / len(evalset)
 
     avg_loss = sum(epoch_losses) / len(epoch_losses) if epoch_losses else 0.0
+    epoch_losses = []
 
     logger.log_epoch(
         epoch, lr=lr_scheduler.get_last_lr(), loss=avg_loss, accuracy=accuracy
@@ -71,12 +74,10 @@ for epoch in range(num_epochs):
         epoch,
         "loss:",
         avg_loss,
-        "evaluation accuracy:",
-        accuracy,
         "lr:",
         lr_scheduler.get_last_lr(),
+        "evaluation accuracy:",
+        accuracy,
     )
-    epoch_losses = []
 
-# close the tensorboard writer when training is finished
 logger.close()

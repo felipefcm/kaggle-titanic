@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
-from typing import Optional, Tuple, cast
+from typing import Optional, cast
 
 
 @dataclass
@@ -22,20 +22,30 @@ class Passenger:
 
 
 @dataclass
+class ProcessedPassenger(Passenger):
+    age_z: float = 0.0
+    sibsp_z: float = 0.0
+    parch_z: float = 0.0
+
+
+@dataclass
 class Stats:
     total_passengers: int
     age_by_class_sex: dict[int, dict[str, float]]
+
     age_mean: float = 0.0
     age_std: float = 1.0
-    fare_mean: float = 0.0
-    fare_std: float = 1.0
-    parch_mean: float = 0.0
-    parch_std: float = 1.0
     sibsp_mean: float = 0.0
     sibsp_std: float = 1.0
+    parch_mean: float = 0.0
+    parch_std: float = 1.0
+
+    age_z: float = 0.0
+    sibsp_z: float = 0.0
+    parch_z: float = 0.0
 
 
-def load_titanic_data(file_path: str) -> Tuple[list[Passenger], Stats]:
+def load_titanic_data(file_path: str):
     data: list[Passenger] = []
     dt = pd.read_csv(file_path)
 
@@ -57,12 +67,34 @@ def load_titanic_data(file_path: str) -> Tuple[list[Passenger], Stats]:
 
         data.append(p)
 
-    age_by_class_sex = _compute_age_means_by_class_sex(data)
+    return data
 
-    data = _impute_missing_ages(data, age_by_class_sex)
-    stats = _compute_zscores_stats(data)
 
-    return (data, stats)
+def process_passengers(passengers: list[Passenger]):
+    stats = _compute_stats(passengers)
+    passengers = _impute_missing_ages(passengers, stats.age_by_class_sex)
+    processed_passengers = _normalise_passengers(passengers, stats)
+
+    return (processed_passengers, stats)
+
+
+def _compute_stats(passengers: list[Passenger]):
+    ages = [p.age for p in passengers if p.age is not None]
+    parchs = [p.parch for p in passengers]
+    sibsps = [p.sibsp for p in passengers]
+
+    stats = Stats(
+        total_passengers=len(passengers),
+        age_by_class_sex=_compute_age_means_by_class_sex(passengers),
+        age_mean=float(np.mean(ages)) if ages else 0.0,
+        age_std=float(np.std(ages)) if ages else 1.0,
+        parch_mean=float(np.mean(parchs)),
+        parch_std=float(np.std(parchs)) if np.std(parchs) > 0 else 1.0,
+        sibsp_mean=float(np.mean(sibsps)),
+        sibsp_std=float(np.std(sibsps)) if np.std(sibsps) > 0 else 1.0,
+    )
+
+    return stats
 
 
 def _compute_age_means_by_class_sex(
@@ -96,23 +128,19 @@ def _impute_missing_ages(
     return imputed_passengers
 
 
-def _compute_zscores_stats(passengers: list[Passenger]) -> Stats:
-    age_by_class_sex = _compute_age_means_by_class_sex(passengers)
+def _normalise_passengers(passengers: list[Passenger], stats: Stats):
+    processed_passengers: list[ProcessedPassenger] = []
 
-    ages = [p.age for p in passengers if p.age is not None]
-    fares = [p.fare for p in passengers]
-    parchs = [p.parch for p in passengers]
-    sibsps = [p.sibsp for p in passengers]
+    for p in passengers:
+        if p.age is None:
+            raise ValueError("Passenger age should not be None when normalising")
 
-    return Stats(
-        total_passengers=len(passengers),
-        age_by_class_sex=age_by_class_sex,
-        age_mean=float(np.mean(ages)) if ages else 0.0,
-        age_std=float(np.std(ages)) if ages else 1.0,
-        fare_mean=float(np.mean(fares)),
-        fare_std=float(np.std(fares)),
-        parch_mean=float(np.mean(parchs)),
-        parch_std=float(np.std(parchs)),
-        sibsp_mean=float(np.mean(sibsps)),
-        sibsp_std=float(np.std(sibsps)),
-    )
+        processed_passenger: ProcessedPassenger = cast(ProcessedPassenger, p)
+
+        processed_passenger.age_z = (p.age - stats.age_mean) / stats.age_std
+        processed_passenger.sibsp_z = (p.sibsp - stats.sibsp_mean) / stats.sibsp_std
+        processed_passenger.parch_z = (p.parch - stats.parch_mean) / stats.parch_std
+
+        processed_passengers.append(processed_passenger)
+
+    return processed_passengers

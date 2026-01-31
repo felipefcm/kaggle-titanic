@@ -9,9 +9,7 @@ class TitanicNN(nn.Module):
         self.stack = nn.Sequential(
             nn.Linear(input_size, 16),
             nn.Sigmoid(),
-            nn.Linear(16, 8),
-            nn.Sigmoid(),
-            nn.Linear(8, 1),
+            nn.Linear(16, 1),
             nn.Sigmoid(),
         )
 
